@@ -135,6 +135,7 @@ docker-compose run airflow-webserver airflow users create --role Admin --usernam
 ####   Spark
 
     Conn ID: spark_conn
+    Conn Type: Spark
     Host: spark://spark
     Port: 7077
     Extra: consists of the JSON below:
