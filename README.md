@@ -128,8 +128,8 @@ docker-compose run airflow-webserver airflow users create --role Admin --usernam
     Extra: consists of the JSON below:
 ```
     { "aws_access_key_id":"airflow",
-      "aws_secret_access_key": "airflow",
-      "host": "http://bucket:9000"
+      "aws_secret_access_key": "sample_key",
+      "host": "http://minio1:9000/"
     }
 ```
 ####   Spark
