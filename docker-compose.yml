@@ -23,7 +23,7 @@ services:
         container_name: JupyterLab
         environment:
             - JUPYTER_ENABLE_LAB="yes"
-            - PYSPARK_SUBMIT_ARGS= --master spark://spark-master:7077 --packages com.amazonaws:aws-java-sdk-bundle:1.11.819,org.apache.hadoop:hadoop-aws:3.2.1 pyspark-shell
+            - PYSPARK_SUBMIT_ARGS= --master spark://spark-master:7077 --packages com.amazonaws:aws-java-sdk-bundle:1.11.819,org.apache.hadoop:hadoop-aws:3.2.3 pyspark-shell
             - AWS_ACCESS_KEY_ID=airflow
             - AWS_SECRET_ACCESS_KEY=sample_key
             - MLFLOW_S3_ENDPOINT_URL=http://minio1:9000
@@ -50,7 +50,8 @@ services:
         depends_on:
             - postgres
             - spark-master
-            - spark-worker
+            - spark-worker-a
+            - spark-worker-b
         environment:   
             - AIRFLOW__CORE__LOAD_EXAMPLES=False
             - LOAD_EX=n
@@ -137,57 +138,124 @@ services:
             "
         networks:
             - server
-      
-    spark-master:        
-        image: bitnami/spark:3.2.1
-        # https://docs.bitnami.com/tutorials/work-with-non-root-containers/
-        user: root 
-        hostname: spark
-        container_name: spark
-        networks:
-            - server
-        environment:
-            - SPARK_MODE=master
-            - SPARK_RPC_AUTHENTICATION_ENABLED=no
-            - SPARK_RPC_ENCRYPTION_ENABLED=no
-            - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-            - SPARK_SSL_ENABLED=no
-        volumes:
-            - ./src/spark/applications:/usr/local/spark/applications            
-            - ./src/spark/assets:/usr/local/spark/assets 
-        ports:
-            - "8081:8080"
-            - "7077:7077"
-        deploy:
-          resources:
-            limits:
-              memory: 500MB
 
-    spark-worker:
-        image: bitnami/spark:3.2.1
-        user: root
-        hostname: spark-worker
-        container_name: spark-worker
+    spark-master:
+        container_name: SparkMaster
+        build:
+            context: ./spark_docker/build
+            dockerfile: Dockerfile
+        ports:
+            - "9090:8080"
+            - "7077:7077"
+        volumes:
+            - ./notebooks:/home/jovyan/work:rw
+            - ./src/spark/applications:/usr/local/spark/applications            
+            - ./src/spark/assets:/usr/local/spark/assets
+        environment:
+            - SPARK_LOCAL_IP=spark-master
+            - SPARK_WORKLOAD=master
         networks:
             - server
-        environment:
-            - SPARK_MODE=worker
-            - SPARK_MASTER_URL=spark://spark:7077
-            - SPARK_WORKER_MEMORY=1G
-            - SPARK_WORKER_CORES=1
-            - SPARK_RPC_AUTHENTICATION_ENABLED=no
-            - SPARK_RPC_ENCRYPTION_ENABLED=no
-            - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
-            - SPARK_SSL_ENABLED=no
-        volumes:
-            - ./src/spark/applications:/usr/local/spark/applications            
-            - ./src/spark/assets:/usr/local/spark/assets 
+
+    spark-worker-a:
+        container_name: SparkWorkerA
+        build:
+            context: ./spark_docker/build
+            dockerfile: Dockerfile
+        ports:
+            - "9091:8080"
+            - "7000:7000"
         depends_on:
             - spark-master
-        deploy:
-          resources:
-            limits:
-              memory: 1GB
+        environment:
+            - SPARK_MASTER=spark://spark-master:7077
+            - SPARK_WORKER_CORES=2
+            - SPARK_WORKER_MEMORY=2G
+            - SPARK_DRIVER_MEMORY=2G
+            - SPARK_EXECUTOR_MEMORY=2G
+            - SPARK_WORKLOAD=worker
+            - SPARK_LOCAL_IP=spark-worker-a
+        volumes:
+            - ./src/notebooks:/home/jovyan/work:rw
+            - ./src/spark/applications:/usr/local/spark/applications            
+            - ./src/spark/assets:/usr/local/spark/assets
+        networks:
+            - server
+
+    spark-worker-b:
+        container_name: SparkWorkerB
+        build:
+            context: ./spark_docker/build
+            dockerfile: Dockerfile
+        ports:
+            - "9092:8080"
+            - "7001:7000"
+        depends_on:
+            - spark-master
+        environment:
+            - SPARK_MASTER=spark://spark-master:7077
+            - SPARK_WORKER_CORES=2
+            - SPARK_WORKER_MEMORY=2G
+            - SPARK_DRIVER_MEMORY=2G
+            - SPARK_EXECUTOR_MEMORY=2G
+            - SPARK_WORKLOAD=worker
+            - SPARK_LOCAL_IP=spark-worker-b
+        volumes:
+            - ./src/notebooks:/home/jovyan/work:rw
+            - ./src/spark/applications:/usr/local/spark/applications            
+            - ./src/spark/assets:/usr/local/spark/assets
+        networks:
+            - server  
+    # spark-master:        
+    #     image: bitnami/spark:3.2.1
+    #     # https://docs.bitnami.com/tutorials/work-with-non-root-containers/
+    #     user: root 
+    #     hostname: spark
+    #     container_name: spark
+    #     networks:
+    #         - server
+    #     environment:
+    #         - SPARK_MODE=master
+    #         - SPARK_RPC_AUTHENTICATION_ENABLED=no
+    #         - SPARK_RPC_ENCRYPTION_ENABLED=no
+    #         - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+    #         - SPARK_SSL_ENABLED=no
+    #     volumes:
+    #         - ./src/spark/applications:/usr/local/spark/applications            
+    #         - ./src/spark/assets:/usr/local/spark/assets 
+    #     ports:
+    #         - "8081:8080"
+    #         - "7077:7077"
+    #     deploy:
+    #       resources:
+    #         limits:
+    #           memory: 500MB
+
+    # spark-worker:
+    #     image: bitnami/spark:3.2.1
+    #     user: root
+    #     hostname: spark-worker
+    #     container_name: spark-worker
+    #     networks:
+    #         - server
+    #     environment:
+    #         - SPARK_MODE=worker
+    #         - SPARK_MASTER_URL=spark://spark:7077
+    #         - SPARK_WORKER_MEMORY=1G
+    #         - SPARK_WORKER_CORES=1
+    #         - SPARK_RPC_AUTHENTICATION_ENABLED=no
+    #         - SPARK_RPC_ENCRYPTION_ENABLED=no
+    #         - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+    #         - SPARK_SSL_ENABLED=no
+    #     volumes:
+    #         - ./src/spark/applications:/usr/local/spark/applications            
+    #         - ./src/spark/assets:/usr/local/spark/assets 
+    #     depends_on:
+    #         - spark-master
+    #     deploy:
+    #       resources:
+    #         limits:
+    #           memory: 1GB
     
     minio1:
         <<: *minio-common
