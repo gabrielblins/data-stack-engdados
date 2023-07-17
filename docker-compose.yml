@@ -44,7 +44,6 @@ services:
         hostname: airflow
         container_name: airflow
         image: andrejunior/airflow-spark:latest
-        restart: always
         networks:
             - server
         depends_on:
@@ -55,7 +54,8 @@ services:
         environment:   
             - AIRFLOW__CORE__LOAD_EXAMPLES=False
             - LOAD_EX=n
-            - EXECUTOR=Local    
+            - EXECUTOR=Local
+            - PYSPARK_SUBMIT_ARGS= --master spark://spark-master:7077 --packages com.amazonaws:aws-java-sdk-bundle:1.11.819
         volumes:
             - airflow-data:/usr/local/airflow/data
             - ./src/dags:/usr/local/airflow/dags
@@ -69,6 +69,7 @@ services:
             interval: 30s
             timeout: 30s
             retries: 3
+    
 
     postgres:
         hostname: postgres
