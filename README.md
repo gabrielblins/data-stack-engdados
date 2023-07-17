@@ -59,19 +59,19 @@ This challenge is currently structured with the following specifications.
     * port: 5432
 
 * **spark-master**: Spark Master
-    * image: bitnami/spark:3.2.1
+    * image: Dockerfile (Spark 3.3.0 + Haddop 3)
     * port: 8081
 
 * **spark-worker**: Spark workers
-    * image: bitnami/spark:3.2.1
+    * image: Dockerfile (Spark 3.3.0 + Haddop 3)
 
 *  **MinIO**: Object storage
 
-   - image: bitnami/minio:latest
+   - image: quay.io/minio/minio:RELEASE.2023-02-22T18-23-45Z
   
 *  **JupyterLab**: Code interface
 
-   - image: jupyter/all-spark-notebook:spark-3.2.1
+   - image: jupyter/all-spark-notebook:spark-3.3.0
     
 ## Step-by-Step
 
